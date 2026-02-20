@@ -1,26 +1,18 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
 import json
 import numpy as np
 
-app = FastAPI()
-
-# Enable CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],   # 👈 allow ALL methods (important)
-    allow_headers=["*"],
-)
-
-# Load telemetry data
+# Load telemetry once
 with open("telemetry.json") as f:
     telemetry = json.load(f)
 
-@app.post("/")
-async def latency_endpoint(request: Request):
-    body = await request.json()
+def handler(request):
+    if request.method != "POST":
+        return {
+            "statusCode": 405,
+            "body": json.dumps({"error": "Method Not Allowed"})
+        }
+
+    body = request.json()
     regions = body.get("regions", [])
     threshold = body.get("threshold_ms", 0)
 
@@ -42,8 +34,13 @@ async def latency_endpoint(request: Request):
             "breaches": int(sum(1 for l in latencies if l > threshold))
         }
 
-    return result
-
-
-# This is CRITICAL for Vercel
-handler = Mangum(app)
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Content-Type": "application/json"
+        },
+        "body": json.dumps(result)
+    }
