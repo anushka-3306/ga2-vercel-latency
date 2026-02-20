@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 import json
 import numpy as np
-import os
 
 app = FastAPI()
 
@@ -14,10 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load telemetry file once
+# Load telemetry data
 with open("telemetry.json") as f:
     telemetry = json.load(f)
-
 
 @app.post("/api/latency")
 async def latency_endpoint(request: Request):
@@ -44,3 +43,7 @@ async def latency_endpoint(request: Request):
         }
 
     return result
+
+
+# This is CRITICAL for Vercel
+handler = Mangum(app)
